@@ -35,10 +35,13 @@ from google import genai
 
 load_dotenv()
 
-# Aqui estamos dizendo:
-#
-# "Python, leia as informações que estão
-# armazenadas dentro do arquivo .env."
+# O Streamlit Cloud utiliza st.secrets.
+# No computador local, utilizamos o arquivo .env.
+
+try:
+    import streamlit as st
+except ImportError:
+    st = None
 
 
 
@@ -48,13 +51,16 @@ load_dotenv()
 
 api_key = os.getenv("GEMINI_API_KEY")
 
-# os.getenv() procura uma variável de ambiente.
-#
-# Estamos procurando:
-#
-# GEMINI_API_KEY
-#
-# Essa informação vem do nosso arquivo .env.
+# Se não encontrou no .env, tenta buscar
+# nos Secrets do Streamlit Cloud.
+
+if not api_key and st is not None:
+
+    try:
+        api_key = st.secrets["GEMINI_API_KEY"]
+
+    except Exception:
+        api_key = None
 
 
 
