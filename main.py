@@ -65,11 +65,7 @@ api_key = os.getenv("GEMINI_API_KEY")
 if not api_key:
 
     print("ERRO: API Key do Gemini não encontrada.")
-    print("Verifique o arquivo .env.")
-    print("A variável deve se chamar GEMINI_API_KEY.")
-
-    # Encerra o programa caso não exista uma chave.
-    exit()
+    print("Verifique o arquivo .env ou os Secrets do Streamlit.")
 
 
 
@@ -77,9 +73,12 @@ if not api_key:
 # 5. CRIAR O CLIENTE DO GEMINI
 # ------------------------------------------------------------
 
-client = genai.Client(
-    api_key=api_key
-)
+client = None
+
+if api_key:
+    client = genai.Client(
+        api_key=api_key
+    )
 
 # Aqui criamos o nosso cliente.
 #
@@ -120,6 +119,11 @@ def consultar_gemini(pergunta):
     Envia uma pergunta para o Gemini
     e devolve a resposta.
     """
+
+    if client is None:
+        raise ValueError(
+            "API Key do Gemini não configurada."
+        )
 
     response = client.models.generate_content(
         model="gemini-3.1-flash-lite",
@@ -170,35 +174,44 @@ Problema apresentado pelo usuário:
 
 
 # ------------------------------------------------------------
-# 9. RECEBER A PERGUNTA DO USUÁRIO
+# 9. EXECUÇÃO DO PROGRAMA PELO TERMINAL
 # ------------------------------------------------------------
 
-pergunta = input("Digite sua pergunta: ")
+if __name__ == "__main__":
+
+    # Só executa esta parte quando rodarmos:
+    #
+    # python main.py
+    #
+    # Quando o Streamlit importar o arquivo,
+    # esta parte NÃO será executada.
+
+    pergunta = input("Digite sua pergunta: ")
 
 
-# ------------------------------------------------------------
-# 10. CONSULTAR O ESTRATEGISTA
-# ------------------------------------------------------------
+    # --------------------------------------------------------
+    # 10. CONSULTAR O ESTRATEGISTA
+    # --------------------------------------------------------
 
-resposta = agente_estrategista(pergunta)
+    resposta = agente_estrategista(pergunta)
 
 
-# ------------------------------------------------------------
-# 11. MOSTRAR A RESPOSTA
-# ------------------------------------------------------------
+    # --------------------------------------------------------
+    # 11. MOSTRAR A RESPOSTA
+    # --------------------------------------------------------
 
-print()
+    print()
 
-print("-" * 60)
+    print("-" * 60)
 
-print("ANÁLISE DO ESTRATEGISTA")
+    print("ANÁLISE DO ESTRATEGISTA")
 
-print("-" * 60)
+    print("-" * 60)
 
-print()
+    print()
 
-print(resposta)
+    print(resposta)
 
-print()
+    print()
 
-print("-" * 60)
+    print("-" * 60)
