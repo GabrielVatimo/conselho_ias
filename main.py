@@ -1,7 +1,7 @@
 # ============================================================
 # CONSELHO DE IAs
-# VERSÃO 1.0
-# Primeiro agente utilizando a Gemini API
+# VERSÃO 1.1
+# Estrategista utilizando Gemini + Crítico utilizando Ollama
 # ============================================================
 
 
@@ -10,23 +10,10 @@
 # ------------------------------------------------------------
 
 import os
-# A biblioteca "os" permite acessar informações
-# do sistema operacional.
-#
-# Vamos utilizá-la para pegar nossa API Key.
-
+import requests
 
 from dotenv import load_dotenv
-# "load_dotenv" permite que o Python leia
-# as variáveis armazenadas no arquivo .env.
-
-
 from google import genai
-# Importamos o SDK oficial da Google para a Gemini API.
-#
-# É através dele que nosso Python vai conversar
-# com o Gemini.
-
 
 
 # ------------------------------------------------------------
@@ -42,7 +29,6 @@ try:
     import streamlit as st
 except ImportError:
     st = None
-
 
 
 # ------------------------------------------------------------
@@ -63,7 +49,6 @@ if not api_key and st is not None:
         api_key = None
 
 
-
 # ------------------------------------------------------------
 # 4. VERIFICAR SE A API KEY EXISTE
 # ------------------------------------------------------------
@@ -74,7 +59,6 @@ if not api_key:
     print("Verifique o arquivo .env ou os Secrets do Streamlit.")
 
 
-
 # ------------------------------------------------------------
 # 5. CRIAR O CLIENTE DO GEMINI
 # ------------------------------------------------------------
@@ -82,22 +66,10 @@ if not api_key:
 client = None
 
 if api_key:
+
     client = genai.Client(
         api_key=api_key
     )
-
-# Aqui criamos o nosso cliente.
-#
-# Pense nele como uma ponte:
-#
-# Python
-#   ↓
-# client
-#   ↓
-# Gemini API
-#   ↓
-# Modelo Gemini
-
 
 
 # ------------------------------------------------------------
@@ -110,15 +82,15 @@ print("=" * 60)
 
 print()
 
-print("Primeiro agente conectado ao Gemini.")
+print("Estrategista: Gemini")
+print("Crítico: Qwen3 8B via Ollama")
 
 print()
 
 
-
-# ------------------------------------------------------------
+# ============================================================
 # 7. FUNÇÃO PARA CONSULTAR O GEMINI
-# ------------------------------------------------------------
+# ============================================================
 
 def consultar_gemini(pergunta):
     """
@@ -127,6 +99,7 @@ def consultar_gemini(pergunta):
     """
 
     if client is None:
+
         raise ValueError(
             "API Key do Gemini não configurada."
         )
@@ -140,7 +113,42 @@ def consultar_gemini(pergunta):
 
 
 # ============================================================
-# 8. AGENTE ESTRATEGISTA
+# 8. FUNÇÃO PARA CONSULTAR O OLLAMA
+# ============================================================
+
+def consultar_ollama(prompt):
+    """
+    Envia uma solicitação para o Ollama
+    e devolve a resposta do modelo local.
+    """
+
+    url = "http://localhost:11434/api/generate"
+
+    dados = {
+        "model": "qwen3:8b",
+        "prompt": prompt,
+        "stream": False
+    }
+
+    resposta = requests.post(
+        url,
+        json=dados
+    )
+
+    if resposta.status_code != 200:
+
+        raise ValueError(
+            f"Erro ao consultar o Ollama: "
+            f"{resposta.status_code} - {resposta.text}"
+        )
+
+    resultado = resposta.json()
+
+    return resultado["response"]
+
+
+# ============================================================
+# 9. AGENTE ESTRATEGISTA
 # ============================================================
 
 def agente_estrategista(pergunta):
@@ -169,7 +177,14 @@ Para cada problema:
 7. Explique por que ela é a melhor.
 
 Não tente agradar o usuário.
-Priorize lógica, evidências e coerência.
+
+Priorize:
+
+- lógica;
+- evidências;
+- coerência;
+- análise de riscos;
+- comparação entre alternativas.
 
 Problema apresentado pelo usuário:
 
@@ -179,9 +194,61 @@ Problema apresentado pelo usuário:
     return consultar_gemini(prompt)
 
 
-# ------------------------------------------------------------
-# 9. EXECUÇÃO DO PROGRAMA PELO TERMINAL
-# ------------------------------------------------------------
+# ============================================================
+# 10. AGENTE CRÍTICO
+# ============================================================
+
+def agente_critico(analise):
+    """
+    Segundo membro do Conselho.
+
+    Sua função é auditar a análise produzida
+    pelo Estrategista, procurando falhas,
+    lacunas, vieses e informações insuficientes.
+    """
+
+    prompt = f"""
+Você é o CRÍTICO do Conselho de IAs.
+
+Outro agente, chamado ESTRATEGISTA, produziu
+uma análise sobre um problema apresentado pelo usuário.
+
+Sua função NÃO é simplesmente produzir uma nova resposta.
+
+Sua função é AUDITAR a análise recebida.
+
+Analise cuidadosamente:
+
+1. O que o Estrategista fez corretamente.
+2. O que ele deixou de considerar.
+3. Quais afirmações são vagas ou não possuem evidências.
+4. Quais premissas podem estar incorretas.
+5. Quais riscos foram ignorados.
+6. Quais possíveis vieses existem.
+7. Quais informações adicionais deveriam ser obtidas.
+8. Dê uma nota de 0 a 10 para a qualidade da análise.
+
+Seja rigoroso e independente.
+
+Não concorde com o Estrategista apenas para
+produzir uma resposta agradável.
+
+Não tente substituir completamente a análise.
+
+Seu objetivo é encontrar possíveis problemas
+na análise apresentada.
+
+ANÁLISE DO ESTRATEGISTA:
+
+{analise}
+"""
+
+    return consultar_ollama(prompt)
+
+
+# ============================================================
+# 11. EXECUÇÃO DO PROGRAMA PELO TERMINAL
+# ============================================================
 
 if __name__ == "__main__":
 
@@ -192,18 +259,42 @@ if __name__ == "__main__":
     # Quando o Streamlit importar o arquivo,
     # esta parte NÃO será executada.
 
-    pergunta = input("Digite sua pergunta: ")
+
+    # --------------------------------------------------------
+    # 12. RECEBER PERGUNTA DO USUÁRIO
+    # --------------------------------------------------------
+
+    pergunta = input(
+        "Digite sua pergunta: "
+    )
 
 
     # --------------------------------------------------------
-    # 10. CONSULTAR O ESTRATEGISTA
+    # 13. CONSULTAR O ESTRATEGISTA
     # --------------------------------------------------------
 
-    resposta = agente_estrategista(pergunta)
+    print()
+    print("🧠 Consultando o Estrategista...")
+
+    resposta = agente_estrategista(
+        pergunta
+    )
 
 
     # --------------------------------------------------------
-    # 11. MOSTRAR A RESPOSTA
+    # 14. CONSULTAR O CRÍTICO
+    # --------------------------------------------------------
+
+    print()
+    print("🦙 Consultando o Crítico...")
+
+    critica = agente_critico(
+        resposta
+    )
+
+
+    # --------------------------------------------------------
+    # 15. MOSTRAR ANÁLISE DO ESTRATEGISTA
     # --------------------------------------------------------
 
     print()
@@ -218,6 +309,26 @@ if __name__ == "__main__":
 
     print(resposta)
 
+
+    # --------------------------------------------------------
+    # 16. MOSTRAR ANÁLISE DO CRÍTICO
+    # --------------------------------------------------------
+
     print()
 
+    print("-" * 60)
+
+    print("ANÁLISE DO CRÍTICO")
+
+    print("-" * 60)
+
+    print()
+
+    print(critica)
+
+    print()
+
+    print("-" * 60)
+
+    print("FIM DA ANÁLISE")
     print("-" * 60)
